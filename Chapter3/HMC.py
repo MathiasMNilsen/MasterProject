@@ -10,7 +10,6 @@ import sympy as sp
 from scipy.integrate import quad
 import matplotlib.pyplot as plt
 import sys
-from functools import cache
 
 def target(q):
     if isinstance(q, sp.Symbol):
@@ -34,7 +33,7 @@ class HMC:
 
         Atributes
         ---------
-        target : Target function to sample from (must also accept sympy.Symbol)
+        target : Target function (must also be able to accept sympy.Symbol)
         n_div  : Number of divergent samples in MCMC run
         n_acc  : Number of accepted samples
         trace  : Chain of samples
@@ -43,32 +42,31 @@ class HMC:
         self.n_div = 0
         self.n_acc = 0
         self.trace = []
+        self.dU = self.diff_U(target_func)
     
     def hamiltonian(self, q, p):
         return p**2/2 - np.log(self.target(q))
     
-    @cache
-    def diff_U(self):
+    def diff_U(self, target):
         x = sp.Symbol('x')
-        dU = sp.diff(-sp.ln(self.target(x)))
-        return dU
+        dU = sp.diff(-sp.ln(target(x)))
+        return sp.lambdify(x, dU, 'numpy')
     
-    def HMC_step(self, q_cur, ε=1.2, L=10):
+    def HMC_step(self, q_cur, ε=0.5, L=16):
         p_cur = np.random.normal(0, 1)
         q = q_cur
         p = p_cur
 
         #Leapfrog integration
-        x = sp.Symbol('x')
-        for i in range(L):
-            p = p - ε/2*float(self.diff_U().evalf(subs={x: q}))
+        for _ in range(L):
+            p = p - ε/2*self.dU(q)
             q = q + ε*p
-            p = p - ε/2*float(self.diff_U().evalf(subs={x: q}))
+            p = p - ε/2*self.dU(q)
         p = -p
 
         H_cur  = self.hamiltonian(q_cur, p_cur)
         H_prop = self.hamiltonian(q, p) 
-        if abs(H_cur - H_prop) > abs(0.5*H_cur):
+        if abs(H_cur - H_prop) > abs(0.2*H_cur):
             self.n_div += 1
             
         #Accept or Reject
@@ -90,25 +88,34 @@ class HMC:
         return
 
 def main():
-    n_samples = 10000 
+    n_samples = 20000
     model = HMC(target)
     model.sample(n=n_samples, q_init=5)
     chain = np.array(model.trace)
-    
-    #Plot Histogram
-    x = np.linspace(-10, 20, 200)
-    label = 'Proposal $\\propto 0.3e^{-0.2x^2} + 0.7e^{-0.2(x-6)^2}$'
     target_norm, _ = quad(target, -np.inf, np.inf)
-    yMax = 2.8/2*np.max(target(x)/target_norm)
-    acc  = round(model.n_acc/n_samples, 2)
+    
+    #Plot Histograms
+    label = 'target'
+    x = np.linspace(-10, 20, 200)
+    yMax = 2.8/2*np.max(target(x)/target_norm) 
 
-    plt.figure()
-    plt.hist(chain, bins=60, density=True, color='lightsteelblue')
-    plt.plot(x, target(x)/target_norm, color='royalblue', label=label) 
-    plt.ylim(0, yMax)
-    plt.xlabel('x')
-    plt.legend()
-    plt.text(x=10, y=yMax/2, s=f'Samples: {n_samples}\nAcceptance rate: {acc}')
+    fig, axs = plt.subplots(2, 2, figsize=(10,8))
+    n = [500, 1000, 10000, 20000]
+    a = [(0,0), (0,1), (1,0), (1,1)]
+    for i in range(4):
+        txt = f'Samples: {n[i]}'
+        axs[a[i]].hist(chain[:n[i]], bins=60,
+                       density=True, color='lightsteelblue')
+        axs[a[i]].plot(x, target(x)/target_norm,
+                       color='royalblue', label=label)
+        axs[a[i]].set_ylim(0, yMax)
+        axs[a[i]].set_xlabel('x')
+        axs[a[i]].legend(fontsize="small")
+        if n[i] == n[-1]: 
+            txt2 = f'\nAcceptance rate: {round(model.n_acc/n_samples, 2)}'
+            axs[a[i]].text(x=9, y=yMax/2, s=txt+txt2 , fontsize="small")
+        else:
+            axs[a[i]].text(x=9, y=yMax/2, s=txt , fontsize="small")
     plt.savefig('HMC.png')
 
     #Plot Trace

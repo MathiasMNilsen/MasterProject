@@ -15,7 +15,7 @@ def main():
 
     target_norm, _ = quad(target, -np.inf, np.inf)
     propsal_width  = 5
-    n_samples = 10000
+    n_samples = 100_000
     x_current = 5
     iteration = []
     n_acc = 0
@@ -37,24 +37,35 @@ def main():
             chain.append(x_current)
 
     #Plot Histogram
-    label = 'Proposal $\\propto 0.3e^{-0.2x^2} + 0.7e^{-0.2(x-6)^2}$'
-    txt = f'Samples: {n_samples}\nAcceptance rate: {round(n_acc/n_samples, 2)}'
+    label = 'target'
     x = np.linspace(-10, 20, 200)
     yMax = 2.8/2*np.max(target(x)/target_norm) 
-    plt.figure()
-    plt.hist(chain, bins=60, density=True, color='lightsteelblue')
-    plt.plot(x, target(x)/target_norm, color='royalblue', label=label)
-    plt.ylim(0, yMax)
-    plt.xlabel('x')
-    plt.legend()
-    plt.text(x=10, y=yMax/2, s=txt)
+
+    fig, axs = plt.subplots(2, 2, figsize=(10,8))
+    n = [1000, 10_000, 50_000, 100_000]
+    a = [(0,0), (0, 1), (1, 0), (1, 1)]
+    for i in range(4):
+        txt = f'Samples: {n[i]}'
+        axs[a[i]].hist(chain[:n[i]], bins=60,
+                       density=True, color='lightsteelblue')
+        axs[a[i]].plot(x, target(x)/target_norm,
+                       color='royalblue', label=label)
+        axs[a[i]].set_ylim(0, yMax)
+        axs[a[i]].set_xlabel('x')
+        axs[a[i]].legend(fontsize="small")
+        if n[i] == n[-1]: 
+            txt2 = f'\nAcceptance rate: {round(n_acc/n_samples, 2)}'
+            axs[a[i]].text(x=9.5, y=yMax/2, s=txt+txt2 , fontsize="small")
+        else:
+            axs[a[i]].text(x=9.5, y=yMax/2, s=txt , fontsize="small")
     plt.savefig('RWM.png')
 
     #Plot Trace
     plt.figure(figsize=(12,4))
-    plt.plot(iteration, chain, color='lightsteelblue', label='Trace')
+    plt.plot(iteration[:10000], chain[:10000],
+             color='lightsteelblue', label='10000 samples')
     plt.xlabel('iteration')
-    plt.ylabel('values')
+    plt.ylabel('x')
     plt.legend()
     plt.savefig('Trace_RWM.png')
 
