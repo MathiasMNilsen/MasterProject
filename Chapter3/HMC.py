@@ -52,7 +52,7 @@ class HMC:
         dU = sp.diff(-sp.ln(target(x)))
         return sp.lambdify(x, dU, 'numpy')
     
-    def HMC_step(self, q_cur, ε=0.5, L=16):
+    def HMC_step(self, q_cur, ε, L):
         p_cur = np.random.normal(0, 1)
         q = q_cur
         p = p_cur
@@ -78,10 +78,10 @@ class HMC:
         else:
             return q_cur
     
-    def sample(self, n, q_init):
+    def sample(self, n, q_init, step_size=0.6, steps=15):
         x = q_init
         for i in range(n):
-            x = self.HMC_step(x)
+            x = self.HMC_step(x, step_size, steps)
             self.trace.append(x)
             printProgressBar(i+1, n, f'{i+1}/{n} samples, {self.n_div} divs')
         print(f'\n{self.n_div} divegernt samples')
@@ -90,7 +90,7 @@ class HMC:
 def main():
     n_samples = 20000
     model = HMC(target)
-    model.sample(n=n_samples, q_init=5)
+    model.sample(n=n_samples, q_init=5, step_size=0.6, steps=16)
     chain = np.array(model.trace)
     target_norm, _ = quad(target, -np.inf, np.inf)
     
