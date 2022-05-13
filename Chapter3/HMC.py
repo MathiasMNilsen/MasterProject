@@ -37,6 +37,7 @@ class HMC:
         n_div  : Number of divergent samples in MCMC run
         n_acc  : Number of accepted samples
         trace  : Chain of samples
+        dU     : Derivative of potential (lambda function)
         '''
         self.target = target_func
         self.n_div = 0
@@ -90,7 +91,7 @@ class HMC:
 def main():
     n_samples = 20000
     model = HMC(target)
-    model.sample(n=n_samples, q_init=5, step_size=0.6, steps=16)
+    model.sample(n=n_samples, q_init=5, step_size=0.6, steps=15)
     chain = np.array(model.trace)
     target_norm, _ = quad(target, -np.inf, np.inf)
     
@@ -123,7 +124,7 @@ def main():
     plt.figure(figsize=(12,4))
     plt.plot(iterations, chain, color='lightsteelblue', label='Trace')
     plt.xlabel('iteration')
-    plt.ylabel('values')
+    plt.ylabel('x')
     plt.legend()
     plt.savefig('Trace_HMC.png')
 

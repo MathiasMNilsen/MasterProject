@@ -138,6 +138,7 @@ class GammaQuenching(JetSampler):
 
 def main():
     gam = GammaQuenching()
+    gam.plot_vacuum_spectrum()
     gam_model = gam.bayesian_model()
     gam.mcmc_inference(gam_model, 30000, 10000, algo='HMC', load_trace=True)
     gam.plot_RAA_ppc(gam_model)

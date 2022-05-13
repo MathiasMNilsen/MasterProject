@@ -112,6 +112,7 @@ class JetSampler:
             data = pd.read_csv(filename, skiprows=12)
             x = data.values[:,0]
             y = data.values[:,3]
+            self.dpT = (data.values[:,2]-data.values[:,1])/2
             self.pp_err = np.zeros_like(y)
             for i in [4, 6, 8]:
                 self.pp_err += data.values[:,i]**2
@@ -200,8 +201,8 @@ class JetSampler:
             ax2.set_xscale('log')
             ax2.grid(True, which="both", ls=":")
         else:
-            plt.errorbar(self.vac_pT, self.vac_y, yerr=None,
-                         color='black', fmt='.',
+            plt.errorbar(self.vac_pT, self.vac_y, xerr=self.dpT,
+                         yerr=self.pp_err, color='black', fmt='.',
                          label=r'pp-Data, $E_{cm} = 5.02$ TeV')
             plt.plot(pT, self.vacuum_func(pT, *self.vac_prms),
                                             label='Fit')
@@ -212,7 +213,7 @@ class JetSampler:
             plt.yscale('log')
             plt.xlabel('$p_T$ [GeV]')
             plt.legend()
-            plt.grid(True)
+            plt.grid(True, which="both", ls=":")
 
         plt.tight_layout()
         if save_name:
@@ -321,7 +322,7 @@ class JetSampler:
         df.to_csv(path_name, sep='\t')
         return
 
-    def plot_RAA_ppc(self, model: pm.Model, dir_name=None) -> None:
+    def plot_RAA_ppc(self, model: pm.Model, dir_name=None, save_name=None):
         '''
         Samples posterior prdeictive for new RAA points
         
@@ -374,9 +375,12 @@ class JetSampler:
         if dir_name: directory = f'{dir_name}/'
         else: directory = f'{self.model_name}/'
 
+        if save_name: name = save_name
+        else: name = 'RAA_ppc.png' 
+
         if not os.path.exists(directory):
             os.makedirs(directory)
-        path_name = os.path.join(directory, 'RAA_ppc.png')
+        path_name = os.path.join(directory, name)
         plt.savefig(path_name)
         print('Done')
         return
@@ -474,24 +478,21 @@ class QuarkGluonQuenching(JetSampler):
         '''
         c_F = 4/3
         c_A = 3
-        a = 0.5
         with pm.Model() as quark_gluon_qunching:
             pT_data  = pm.Data('RAA_pT', self.raa_pT)
             RAA_data = pm.Data('RAA_data', self.raa)
             
-            ω  = pm.Normal('ω', 30, 10)
-            #μ1 = pm.HalfNormal('μ1', 5)
-            #μ2 = pm.HalfNormal('μ2', 5)
-            σ1 = pm.HalfNormal('σ1', 4)
-            σ2 = pm.HalfNormal('σ2', 4)
+            ω  = pm.Normal('ω', 70, 20)
+            σ1 = pm.HalfNormal('σ1', 3)
+            σ2 = pm.HalfNormal('σ2', 3)
             δ  = pm.Uniform('δ', 0, 1)    #Used in the likelihood
             
-            μ1 = np.log(c_F*ω) #- 0.5*σ1**2
-            μ2 = np.log(c_A*ω) #- 0.5*σ2**2
+            μ1 = np.log(c_F*ω/2) - 0.5*σ1**2
+            μ2 = np.log(c_A*ω/2) - 0.5*σ2**2
             theta = [μ1, σ1, μ2, σ2]
-            raa  = pm.Deterministic('Raa', δ*self.raa_model(pT_data, theta))
+            raa  = pm.Deterministic('Raa', self.raa_model(pT_data, theta))
 
-            pm.Normal('LH', mu=raa, sigma=self.raa_err, observed=RAA_data)
+            pm.Normal('LH', mu=raa, sigma=δ*self.raa_err, observed=RAA_data)
         return quark_gluon_qunching
     
     def plot_energyloss_dist(self):
@@ -536,8 +537,8 @@ class QuarkGluonQuenching(JetSampler):
 
         plt.xlabel(r'$\varepsilon$ [GeV]')
         plt.ylabel(r'$D(\varepsilon)$')
-        plt.xlim(0.1, 100)
-        plt.ylim(0.001, 0.2)
+        plt.xlim(0.01, 100)
+        plt.ylim(0.001, 0.1)
         #plt.yscale('log')
         plt.xscale('log')
         plt.legend(loc='upper right')
