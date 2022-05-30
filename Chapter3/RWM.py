@@ -7,6 +7,9 @@ Inspiration taken from "An Introduction to MCMC for Machine Learning"
 import numpy as np
 from scipy.integrate import quad
 import matplotlib.pyplot as plt
+from matplotlib import rc
+
+rc('font', **{'size': 12, 'family': 'serif', 'serif': ['Computer Modern']})
 
 def target(x):
     return 0.3*np.exp(-0.2*x**2) + 0.7*np.exp(-0.2*(x-6)**2)
@@ -55,10 +58,10 @@ def main():
         axs[a[i]].legend(fontsize="small")
         if n[i] == n[-1]: 
             txt2 = f'\nAcceptance rate: {round(n_acc/n_samples, 2)}'
-            axs[a[i]].text(x=9.5, y=yMax/2, s=txt+txt2 , fontsize="small")
+            axs[a[i]].text(x=-10, y=yMax/2, s=txt+txt2 , fontsize="small")
         else:
-            axs[a[i]].text(x=9.5, y=yMax/2, s=txt , fontsize="small")
-    plt.savefig('RWM.png')
+            axs[a[i]].text(x=-10, y=yMax/2, s=txt , fontsize="small")
+    plt.savefig('RWM.png', dpi=400)
 
     #Plot Trace
     plt.figure(figsize=(12,4))
@@ -67,7 +70,7 @@ def main():
     plt.xlabel('iteration')
     plt.ylabel('x')
     plt.legend()
-    plt.savefig('Trace_RWM.png')
+    plt.savefig('Trace_RWM.png', dpi=400)
 
 
 if __name__ == '__main__':

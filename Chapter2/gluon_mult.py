@@ -4,6 +4,9 @@ import sympy as sp
 import numpy as np
 
 from scipy.integrate import quad
+from matplotlib import rc
+
+rc('font', **{'size': 12, 'family': 'serif', 'serif': ['Computer Modern']})
 
 def integrand(x):
     return (np.log(np.cosh(1/np.sqrt(2*x))**2-np.sin(1/np.sqrt(2*x))**2))/(2*x)
@@ -52,9 +55,9 @@ def main():
     plt.xlim(10e-4, 10e0)
     plt.ylim(10e-4, 10e2)
     plt.legend()
-    plt.grid()
+    plt.grid(linewidth=0.2)
     plt.text(1.5, 4, r'$\bar{\alpha}=0.42$')
-    plt.savefig('gluon_mult.png')
+    plt.savefig('gluon_mult.png', dpi=400)
 
 if __name__ == '__main__':
     main()

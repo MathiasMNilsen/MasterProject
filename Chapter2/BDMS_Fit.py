@@ -6,7 +6,11 @@ import numpy as np
 import pandas as pd
 import matplotlib.pyplot as plt
 import seaborn as sns
+
+from matplotlib import rc
 from scipy.optimize import curve_fit
+
+rc('font', **{'size': 12, 'family': 'serif', 'serif': ['Computer Modern']})
 sns.set_theme(style="ticks")
 
 def analytic(x, a):
@@ -41,7 +45,7 @@ def main():
     qBDMS = analytic(eps, 2*a_s*c_F/np.pi)
     gBDMS = analytic(eps, 2*a_s*c_A/np.pi)  
 
-    plt.figure(figsize=(8,6))
+    plt.figure()
     plt.plot(eps, qBDMS, color='lightsteelblue', label='BDMS estimate: quark')
     plt.plot(eps, gBDMS, color='lightcoral', label='BDMS estimate: gluon')
     plt.plot(x_q, y_q, color='darkblue', label=r'Hard quark: $C_R=C_F=4/3$')
@@ -49,13 +53,13 @@ def main():
     plt.plot(eps, log_normal(eps, *prms_q), '--', color='darkblue', label=lq)
     plt.plot(eps, log_normal(eps, *prms_g), '--', color='darkred' , label=lg)
 
-    plt.text(1.02, 2.0, r'$\alpha_s=0.5$')
+    plt.text(1.02, 1.75, r'$\alpha_s=0.5$')
     plt.grid(linewidth=0.2)
     plt.xlim(0, 1.35)
     plt.legend()
     plt.xlabel('$x=\epsilon/\omega_c$')
     plt.ylabel('$\omega_c D(\epsilon)$')
-    plt.savefig('BDMS_Fit.png')
+    plt.savefig('BDMS_Fit.png', dpi=400)
 
 if __name__ == '__main__':
     main()

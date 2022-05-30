@@ -58,14 +58,14 @@ int main() {
         pythia.readString("PDF:nPDFSetA = 1");
         pythia.readString("PDF:nPDFBeamA = 100822080");
     }
-    pythia.readString("Beams:idA = 2212");
-    pythia.readString("Beams:idB = 2212");
-    pythia.readString("Beams:eCM = " + e_cm);
-    pythia.readString("HardQCD:all = on");
+    pythia.readString("Beams:idA = 2212");      //Proton
+    pythia.readString("Beams:idB = 2212");      //Proton
+    pythia.readString("Beams:eCM = " + e_cm);   //E_cm energy
+    pythia.readString("HardQCD:all = on");      //pQCD
     pythia.readString("SoftQCD:all = off");
     pythia.readString("PartonLevel:MPI = off");
     pythia.readString("PartonLevel:ISR = off");
-    pythia.readString("HadronLevel:all = off");
+    pythia.readString("HadronLevel:all = off"); //No Hadronization
     pythia.readString("PhaseSpace:pTHatMin = 30.");
     pythia.readString("PhaseSpace:bias2Selection = on");
     pythia.readString("PhaseSpace:bias2SelectionPow = 4.");
@@ -81,7 +81,7 @@ int main() {
     Hist Gloun_jet("Gluon", nBin, pT_min, pT_max, true);
 
     //Constants
-    int n_events = 1e7;
+    int n_events = 1e7; //10 million events
     double R = 0.4;
     double pT_jet_min = 50;
     double eta_max = 2.8;

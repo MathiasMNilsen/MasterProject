@@ -10,7 +10,7 @@ import matplotlib.pyplot as plt
 import arviz as az
 import seaborn as sns
 import os
-sns.set_theme(style="ticks")
+
 
 def in_1sigma(var: float, var_array) -> bool:
     var_mean = np.mean(var_array)
@@ -69,6 +69,8 @@ class JetSampler:
             self.vac_pT = pp_data[0]
             self.vac_y  = pp_data[1]
             self.vac_prms = self.get_prms(self.vac_pT, self.vac_y)
+            print('\nRef. pT: ', self.vac_pT[0])
+            print('\nCross section parameters: ', self.vac_prms)
         else:
             path =f'Data/Vacuum/{self.e_cm}/'
             if self.nPDF: pdf  = '_nPDF'
@@ -82,6 +84,11 @@ class JetSampler:
             self.vac_prms = self.get_prms(self.vac_pT, self.vac_y)
             self.qrk_prms = self.get_prms(self.qrk_pT, self.qrk_y)
             self.gln_prms = self.get_prms(self.gln_pT, self.gln_y)
+
+            print('\nRef. pT: ', self.vac_pT[0])
+            print('\nTotal pT-spectrum parameters: ', self.vac_prms)
+            print('Quark pT-spectrum parameters: ', self.qrk_prms)
+            print('Gluon pT-spectrum parameters: ', self.gln_prms)
 
     def vacuum_func(self, pT, a, n, B, G, D):
         '''Function to be fitted to the vacuum spectrum'''
@@ -113,11 +120,13 @@ class JetSampler:
             x = data.values[:,0]
             y = data.values[:,3]
             self.dpT = (data.values[:,2]-data.values[:,1])/2
+            '''
             self.pp_err = np.zeros_like(y)
             for i in [4, 6, 8]:
                 self.pp_err += data.values[:,i]**2
             self.pp_err  = np.sqrt(self.pp_err)
-            return x, y
+            '''
+            return np.array(x,dtype='float64'), np.array(y,dtype='float64')
         else:
             data = pd.read_csv(filename, sep=sep, header=None)
             if nCol == 3:
@@ -188,7 +197,7 @@ class JetSampler:
             ax1.set_xscale('log')
             ax1.set_yscale('log')
             ax1.legend()
-            ax1.grid(True, which="both", ls=":")
+            ax1.grid(True, ls=":")
 
             qrk_spec = self.vacuum_func(pT, *self.qrk_prms)
             gln_spec = self.vacuum_func(pT, *self.gln_prms)
@@ -199,7 +208,7 @@ class JetSampler:
             ax2.set_xlabel('$p_T$ [GeV]')
             ax2.set_ylabel('Fractions')
             ax2.set_xscale('log')
-            ax2.grid(True, which="both", ls=":")
+            ax2.grid(True, ls=":")
         else:
             plt.errorbar(self.vac_pT, self.vac_y, xerr=self.dpT,
                          yerr=self.pp_err, color='black', fmt='.',
@@ -291,6 +300,7 @@ class JetSampler:
             self.load_sampled_trace(pyModel)
             if not self._do_sampling: save_trace = False
         
+        directory = f'{self.model_name}/'
         if self._do_sampling:
             with pyModel:
                 alogrithm = {'HMC': pm.HamiltonianMC(target_accept=0.97),
@@ -306,7 +316,6 @@ class JetSampler:
                     save_name = f'Traces/{self.model_name}'
                     pm.save_trace(self.trace, save_name, overwrite=True)
 
-                directory = f'{self.model_name}/'
                 if not os.path.exists(directory): os.makedirs(directory)
                 path_name = os.path.join(directory, 'Traceplot.png')
 
@@ -316,6 +325,7 @@ class JetSampler:
                 fig.savefig(path_name)
 
         #Save Summary
+        if not os.path.exists(directory): os.makedirs(directory)
         path_name = os.path.join(f'{self.model_name}/', 'Trace_summary.csv')
         df = az.summary(data = self.trace, var_names=self.parameters,
                         round_to=2)
@@ -346,7 +356,7 @@ class JetSampler:
             pm.set_data({'RAA_pT': new_pT})
             print('\nSampling Posterior Predictive')
             post_pred = pm.sample_posterior_predictive(trace=self.trace,
-                                                    samples=5000,
+                                                    samples=10000,
                                                     var_names=['Raa'])
         print('\nPlotting')
         fig, ax = plt.subplots()
@@ -381,7 +391,7 @@ class JetSampler:
         if not os.path.exists(directory):
             os.makedirs(directory)
         path_name = os.path.join(directory, name)
-        plt.savefig(path_name)
+        plt.savefig(path_name, dpi = 500)
         print('Done')
         return
     
@@ -397,7 +407,7 @@ class JetSampler:
         trace_df = pm.trace_to_dataframe(self.trace, varnames=self.parameters)
         pg = sns.PairGrid(trace_df, despine=False,
                           diag_sharey=False, corner=True)
-        pg.map_diag(sns.kdeplot, bw_adjust=0.8)
+        pg.map_diag(sns.kdeplot)
         pg.map_lower(sns.kdeplot, shade=True, bw_adjust=0.7)
         plt.subplots_adjust(wspace=0.0, hspace=0.0)
         
@@ -405,7 +415,7 @@ class JetSampler:
         if not os.path.exists(directory):
             os.makedirs(directory)
         path_name = os.path.join(directory, 'corner_plot.png')
-        pg.savefig(path_name)
+        pg.savefig(path_name, dpi=300)
 
 
 
@@ -478,19 +488,20 @@ class QuarkGluonQuenching(JetSampler):
         '''
         c_F = 4/3
         c_A = 3
+
         with pm.Model() as quark_gluon_qunching:
             pT_data  = pm.Data('RAA_pT', self.raa_pT)
             RAA_data = pm.Data('RAA_data', self.raa)
-            
-            ω  = pm.Normal('ω', 70, 20)
-            σ1 = pm.HalfNormal('σ1', 3)
-            σ2 = pm.HalfNormal('σ2', 3)
+
+            ω  = pm.Uniform('ω', 0, 100)
+            σ1 = pm.Uniform('σ1', 0, 5)
+            σ2 = pm.Uniform('σ2', 0, 5)
             δ  = pm.Uniform('δ', 0, 1)    #Used in the likelihood
             
-            μ1 = np.log(c_F*ω/2) - 0.5*σ1**2
-            μ2 = np.log(c_A*ω/2) - 0.5*σ2**2
+            μ1 = np.log(c_F*ω) - 0.5*σ1**2
+            μ2 = np.log(c_A*ω) - 0.5*σ2**2
             theta = [μ1, σ1, μ2, σ2]
-            raa  = pm.Deterministic('Raa', self.raa_model(pT_data, theta))
+            raa = pm.Deterministic('Raa', self.raa_model(pT_data, theta))
 
             pm.Normal('LH', mu=raa, sigma=δ*self.raa_err, observed=RAA_data)
         return quark_gluon_qunching
@@ -499,7 +510,6 @@ class QuarkGluonQuenching(JetSampler):
         #Must be fixed!!
         c_F = 4/3
         c_A = 3
-        a = 0.5
         ε_g = np.logspace(-3, 2, 100)
         ε_q = np.logspace(-4, 2, 100)
         σ1_tr  = self.trace['σ1']
@@ -511,37 +521,51 @@ class QuarkGluonQuenching(JetSampler):
         distQ = np.zeros_like(ε_q)
         distG = np.zeros_like(ε_g)  
 
-        plt.figure()
+        _, (ax1, ax2) = plt.subplots(1, 2, figsize=(12,4))
         for s1, s2, w in zip(σ1_tr, σ2_tr, w_tr): 
             m1 = np.log(w*c_F) - 0.5*s1**2
             current_Q = self.logNormal(ε_q, m1, s1)
             distQ += current_Q
             if (in_1sigma(s1, σ1_tr) and in_1sigma(w, w_tr)):
-                plt.plot(ε_q, current_Q, color='lightsteelblue',
+                ax1.plot(ε_q, current_Q, color='lightsteelblue',
                          linewidth = 0.05)
             m2 = np.log(w*c_A) - 0.5*s2**2
             current_G = self.logNormal(ε_g, m2, s2)
             distG += current_G
             if (in_1sigma(s2, σ2_tr) and in_1sigma(w, w_tr)):
-                plt.plot(ε_g, current_G, color='rosybrown',
+                ax2.plot(ε_g, current_G, color='rosybrown',
                          linewidth = 0.05)
         
         μ1_mean = np.log(w_mean*c_F) - 0.5*σ1_mean**2
         μ2_mean = np.log(w_mean*c_A) - 0.5*σ2_mean**2
-        plt.plot(ε_q, self.logNormal(ε_q, μ1_mean, σ1_mean),
+        ax1.plot(ε_q, self.logNormal(ε_q, μ1_mean, σ1_mean),
                  color='darkblue',
-                 label=f'Posterior expetation for quark jets')
-        plt.plot(ε_g, self.logNormal(ε_g, μ2_mean, σ2_mean),
+                 label=f'Energy-loss distribution for quark jets')
+        ax2.plot(ε_g, self.logNormal(ε_g, μ2_mean, σ2_mean),
                  color='darkred',
-                 label=f'Posterior expetation for gluon jets')
+                 label=f'Energy-loss distribution for gluon jets')
 
-        plt.xlabel(r'$\varepsilon$ [GeV]')
-        plt.ylabel(r'$D(\varepsilon)$')
-        plt.xlim(0.01, 100)
-        plt.ylim(0.001, 0.1)
-        #plt.yscale('log')
-        plt.xscale('log')
-        plt.legend(loc='upper right')
+        ax1.set_xlabel(r'$\varepsilon$ [GeV]')
+        ax2.set_xlabel(r'$\varepsilon$ [GeV]')
+
+        ax1.set_ylabel(r'$D(\varepsilon)$')
+        ax2.set_ylabel(r'$D(\varepsilon)$')
+
+        ax1.set_xlim(0.01, 100)
+        ax2.set_xlim(0.01, 100)
+
+        ax1.set_ylim(0.001, 0.5)
+        ax2.set_ylim(0.001, 0.5)
+
+        ax1.set_xscale('log')
+        ax2.set_xscale('log')
+
+        ax1.set_yscale('log')
+        ax2.set_yscale('log')
+
+        ax1.legend(loc='upper right')
+        ax2.legend(loc='upper right')
+
         plt.tight_layout()
         directory = f'{self.model_name}/'
         if not os.path.exists(directory):

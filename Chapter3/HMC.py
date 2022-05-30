@@ -8,8 +8,11 @@ Inspiration taken from "An Introduction to MCMC for Machine Learning"
 import numpy as np
 import sympy as sp
 from scipy.integrate import quad
+from matplotlib import rc
 import matplotlib.pyplot as plt
 import sys
+
+rc('font', **{'size': 12, 'family': 'serif', 'serif': ['Computer Modern']})
 
 def target(q):
     if isinstance(q, sp.Symbol):
@@ -114,10 +117,10 @@ def main():
         axs[a[i]].legend(fontsize="small")
         if n[i] == n[-1]: 
             txt2 = f'\nAcceptance rate: {round(model.n_acc/n_samples, 2)}'
-            axs[a[i]].text(x=9, y=yMax/2, s=txt+txt2 , fontsize="small")
+            axs[a[i]].text(x=-10, y=yMax/2, s=txt+txt2 , fontsize="small")
         else:
-            axs[a[i]].text(x=9, y=yMax/2, s=txt , fontsize="small")
-    plt.savefig('HMC.png')
+            axs[a[i]].text(x=-10, y=yMax/2, s=txt , fontsize="small")
+    plt.savefig('HMC.png', dpi=400)
 
     #Plot Trace
     iterations = np.array([i+1 for i in range(len(chain))])
@@ -126,7 +129,7 @@ def main():
     plt.xlabel('iteration')
     plt.ylabel('x')
     plt.legend()
-    plt.savefig('Trace_HMC.png')
+    plt.savefig('Trace_HMC.png', dpi=400)
 
 if __name__ == '__main__':
     main()

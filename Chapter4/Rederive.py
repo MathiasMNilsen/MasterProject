@@ -76,12 +76,12 @@ class GammaQuenching(JetSampler):
         with pm.Model() as gamma_qunching:
             pT_data  = pm.Data('RAA_pT', self.raa_pT)
             RAA_data = pm.Data('RAA_data', self.raa)
+
+            α = pm.Uniform('α', 0, 10)
+            β = pm.Uniform('β', 0, 10)
+            γ = pm.Uniform('γ', 0, 1)
             
-            α = pm.HalfNormal('α', sigma=5)
-            β = pm.HalfNormal('β', sigma=5)
-            γ = pm.HalfNormal('γ', sigma=1)
-            
-            theta = [α, β, γ]
+            theta = [α, 0.8*β, γ]
             raa = pm.Deterministic('Raa', self.raa_model(pT_data, theta))
             pm.Normal('LH', mu=raa, sigma=self.raa_err, observed=RAA_data)
         return gamma_qunching
@@ -133,17 +133,21 @@ class GammaQuenching(JetSampler):
         if not os.path.exists(directory):
             os.makedirs(directory)
         path_name = os.path.join(directory, 'Energyloss.png')
-        plt.savefig(path_name)
+        plt.savefig(path_name, dpi=300)
         return
 
 def main():
     gam = GammaQuenching()
-    gam.plot_vacuum_spectrum()
+    #gam.plot_vacuum_spectrum()
     gam_model = gam.bayesian_model()
-    gam.mcmc_inference(gam_model, 30000, 10000, algo='HMC', load_trace=True)
+    gam.mcmc_inference(gam_model, 50000, 5000, algo='HMC', load_trace=True)
     gam.plot_RAA_ppc(gam_model)
     gam.plot_corner()
     gam.plot_energyloss_dist()
 
+    #Validation
+    gam2 = GammaQuenching(e_cm=2760, rap=2.1)
+    gam2.load_sampled_trace(gam2.bayesian_model())
+    gam2.plot_RAA_ppc(gam2.bayesian_model(), save_name='Validation2')
 if __name__ == '__main__':
     main()
